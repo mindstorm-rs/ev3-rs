@@ -3,6 +3,8 @@ name = "ev3"
 version = "0.1.0"
 authors = ["Massimiliano Mantione <massimiliano.mantione@gmail.com>"]
 edition = "2018"
+description = "High level EV3 API"
+license = "MIT"
 
 [dependencies]
-ev3rt = { path = "../ev3rt" }
+ev3rt = "0.1.0"
