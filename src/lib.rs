@@ -1356,7 +1356,7 @@ impl core::ops::SubAssign for Duration {
 }
 
 pub struct Time {
-    ticks: u64,
+    ticks: u32,
     duration_from_last_read: Duration,
     duration_from_last_reset: Duration,
 }
@@ -1364,15 +1364,15 @@ pub struct Time {
 impl Time {
     pub fn new() -> Self {
         Self {
-            ticks: ev3rt::get_utime(),
+            ticks: ev3rt::fch_hrt(),
             duration_from_last_read: Duration::zero(),
             duration_from_last_reset: Duration::zero(),
         }
     }
 
-    fn compute_duration_from_last_read(&self) -> (Duration, u64) {
+    fn compute_duration_from_last_read(&self) -> (Duration, u32) {
         let previous = self.ticks;
-        let current = ev3rt::get_utime();
+        let current = ev3rt::fch_hrt();
         let delta = Duration::new((current - previous) as i32);
         (delta, current)
     }
