@@ -1373,11 +1373,17 @@ impl Time {
     fn compute_duration_from_last_read(&self) -> (Duration, u32) {
         let previous = self.ticks;
         let current = ev3rt::fch_hrt();
-        let delta = Duration::new((current - previous) as i32);
+        let mut difference = (current - previous) as i32;
+        if difference < 0 {
+            difference = -difference;
+        }
+        let delta = Duration::new(difference);
         (delta, current)
     }
 
     pub fn read(&mut self) {
+        let (delta, current) = self.compute_duration_from_last_read();
+        /*
         let (mut delta, mut current) = self.compute_duration_from_last_read();
         while delta.usec() < 800 {
             //ev3rt::sleep(1);
@@ -1385,6 +1391,7 @@ impl Time {
             delta = d;
             current = c;
         }
+        */
 
         self.ticks = current;
         self.duration_from_last_read = delta;
@@ -1624,10 +1631,10 @@ impl Ev3 {
 
         self.screen.set_info_bold(0, true);
         self.screen.render_info();
-        self.ma().attempt_cfg_apply();
-        self.mb().attempt_cfg_apply();
-        self.mc().attempt_cfg_apply();
-        self.md().attempt_cfg_apply();
+        //self.ma().attempt_cfg_apply();
+        //self.mb().attempt_cfg_apply();
+        //self.mc().attempt_cfg_apply();
+        //self.md().attempt_cfg_apply();
         self.screen.set_info_bold(0, false);
         self.screen.render_info();
 
@@ -1676,7 +1683,7 @@ impl Ev3 {
                 let todo = !self.sensors[current_sensor].configuration_applied();
                 self.screen.set_info_bold(1 + current_sensor, todo);
                 if todo {
-                    self.sensors[current_sensor].attempt_cfg_apply();
+                    //self.sensors[current_sensor].attempt_cfg_apply();
                 }
             }
 
