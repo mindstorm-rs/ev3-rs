@@ -1356,7 +1356,7 @@ impl core::ops::SubAssign for Duration {
 }
 
 pub struct Time {
-    ticks: u32,
+    ticks: u64,
     duration_from_last_read: Duration,
     duration_from_last_reset: Duration,
 }
@@ -1364,23 +1364,24 @@ pub struct Time {
 impl Time {
     pub fn new() -> Self {
         Self {
-            ticks: ev3rt::fch_hrt(),
+            ticks: ev3rt::get_utime(),
             duration_from_last_read: Duration::zero(),
             duration_from_last_reset: Duration::zero(),
         }
     }
 
-    fn compute_duration_from_last_read(&self) -> (Duration, u32) {
+    fn compute_duration_from_last_read(&self) -> (Duration, u64) {
         let previous = self.ticks;
-        let current = ev3rt::fch_hrt();
+        let current = ev3rt::get_utime();
         let delta = Duration::new((current - previous) as i32);
         (delta, current)
     }
 
     pub fn read(&mut self) {
         let (mut delta, mut current) = self.compute_duration_from_last_read();
+        // It turns out that waiting "a bit" gives more reliable sensor reads...
         while delta.usec() < 800 {
-            //ev3rt::sleep(1);
+            //ev3rt::msleep(1);
             let (d, c) = self.compute_duration_from_last_read();
             delta = d;
             current = c;
