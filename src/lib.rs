@@ -77,15 +77,19 @@ impl SensorData {
     pub fn val(&self) -> i32 {
         Self::val_conversion(self.data[0])
     }
+
     pub fn v1(&self) -> i32 {
         Self::val_conversion(self.data[0])
     }
+
     pub fn v2(&self) -> i32 {
         Self::val_conversion(self.data[1])
     }
+
     pub fn v3(&self) -> i32 {
         Self::val_conversion(self.data[2])
     }
+
     pub fn v4(&self) -> i32 {
         Self::val_conversion(self.data[3])
     }
@@ -718,9 +722,11 @@ impl InfoBox {
     pub fn value(&self) -> i32 {
         self.todo_value
     }
+ 
     pub fn set_value(&mut self, value: i32) {
         self.todo_value = value;
     }
+ 
     pub fn setup_value(&mut self, position: u8, digits: u8) {
         self.value_position = position;
         self.value_digits = digits;
@@ -731,6 +737,7 @@ impl InfoBox {
         self.todo_value = 0;
         self.done_value = 0;
     }
+
     pub fn setup_signed_value(
         &mut self,
         position: u8,
@@ -748,6 +755,7 @@ impl InfoBox {
         self.todo_value = 0;
         self.done_value = 0;
     }
+
     pub fn setup_glyphs(&mut self, gphs: &[Gph]) {
         for (i, g) in gphs.iter().enumerate() {
             self.todo[i] = *g;
@@ -1005,12 +1013,15 @@ impl Screen {
     pub fn info_x(&self) -> i32 {
         self.info_x
     }
+
     pub fn info_y(&self) -> i32 {
         self.info_y
     }
+
     pub fn info_w(&self) -> i32 {
         self.info_w
     }
+
     pub fn info_h(&self) -> i32 {
         self.info_h
     }
@@ -1074,15 +1085,18 @@ impl Screen {
         let index = self.safe_info_index(index);
         self.infos[index].set_value(value);
     }
+   
     pub fn set_info_bold(&mut self, index: usize, bold: bool) {
         let index = self.safe_info_index(index);
         self.infos[index].todo_bold = bold;
     }
+   
     pub fn deselect_infos(&mut self) {
         for i in 0..self.info_count as usize {
             self.infos[i].todo_bold = false;
         }
     }
+   
     pub fn select_info(&mut self, index: usize) {
         self.deselect_infos();
         let index = self.safe_info_index(index);
@@ -1105,6 +1119,7 @@ impl Screen {
         let index = self.safe_info_index(index);
         self.infos[index].setup_signed_value(position, digits, positive, zero, negative);
     }
+
     pub fn setup_info_glyphs(&mut self, index: usize, gphs: &[Gph]) {
         let index = self.safe_info_index(index);
         self.infos[index].setup_glyphs(gphs);
@@ -1157,6 +1172,7 @@ impl Screen {
     pub fn info_base(&self) -> (i32, i32) {
         (self.info_x, self.info_y)
     }
+ 
     fn info_base_point(&self) -> Point {
         Point::new(self.info_x, self.info_y)
     }
@@ -1164,6 +1180,7 @@ impl Screen {
     pub fn graph_base(&self) -> (i32, i32) {
         (self.graph_x, self.graph_y)
     }
+ 
     pub fn graph_origin(&self) -> (i32, i32) {
         (self.graph_x + self.graph_ox, self.graph_y + self.graph_oy)
     }
@@ -1223,6 +1240,7 @@ impl Screen {
         };
         ev3rt::lcd_fill_rect(x, y, w, h, c);
     }
+
     fn clear_in_info(&self, p: Point, w: i32, h: i32) {
         self.box_in_info(p.x as i32, p.y as i32, w, h, LcdColor::WHITE);
     }
@@ -1296,6 +1314,7 @@ impl Leds {
         *self = Self::new();
         self.apply();
     }
+    
     pub fn apply(&mut self) {
         if self.todo_red != self.done_red || self.todo_green != self.done_green {
             let c = match (self.todo_red, self.todo_green) {
@@ -1320,9 +1339,11 @@ impl Duration {
     pub fn new(ticks: i32) -> Self {
         Self { ticks }
     }
+
     pub fn from_usec(usec: i32) -> Self {
         Self::new(usec)
     }
+
     pub fn from_msec(msec: i32) -> Self {
         Self::new(msec * 1000)
     }
@@ -1350,17 +1371,20 @@ impl core::ops::Add for Duration {
         Self::new(self.ticks + other.ticks)
     }
 }
+
 impl core::ops::Sub for Duration {
     type Output = Self;
     fn sub(self, other: Self) -> Self {
         Self::new(self.ticks - other.ticks)
     }
 }
+
 impl core::ops::AddAssign for Duration {
     fn add_assign(&mut self, other: Self) {
         self.ticks += other.ticks;
     }
 }
+
 impl core::ops::SubAssign for Duration {
     fn sub_assign(&mut self, other: Self) {
         self.ticks -= other.ticks;
@@ -1411,6 +1435,7 @@ impl Time {
     pub fn from_last_read(&self) -> Duration {
         self.duration_from_last_read
     }
+
     pub fn from_last_reset(&self) -> Duration {
         self.duration_from_last_reset
     }
@@ -1444,6 +1469,7 @@ impl KeyStatus {
     pub fn is_pressed(&self) -> bool {
         self.pressed
     }
+
     pub fn is_released(&self) -> bool {
         !self.pressed
     }
