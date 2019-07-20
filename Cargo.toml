@@ -7,4 +7,5 @@ description = "High level EV3 API"
 license = "MIT"
 
 [dependencies]
-ev3rt = "0.3.0"
+#ev3rt = "0.3.0"
+ev3rt = {path = "../ev3rt-rs"}
