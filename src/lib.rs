@@ -71,20 +71,23 @@ impl SensorData {
         self.port_idx
     }
 
+    fn val_conversion(v: u16) -> i32 {
+        (v as i16) as i32
+    }
     pub fn val(&self) -> i32 {
-        self.data[0] as i32
+        Self::val_conversion(self.data[0])
     }
     pub fn v1(&self) -> i32 {
-        self.data[0] as i32
+        Self::val_conversion(self.data[0])
     }
     pub fn v2(&self) -> i32 {
-        self.data[1] as i32
+        Self::val_conversion(self.data[1])
     }
     pub fn v3(&self) -> i32 {
-        self.data[2] as i32
+        Self::val_conversion(self.data[2])
     }
     pub fn v4(&self) -> i32 {
-        self.data[3] as i32
+        Self::val_conversion(self.data[3])
     }
 
     pub fn configuration_applied(&self) -> bool {
@@ -129,7 +132,7 @@ impl SensorData {
                     self.cfg_applied = true;
                     match mode {
                         _ => {
-                            self.cfg_applied = false;
+                            self.cfg_applied = true;
                         }
                     }
                 }
@@ -274,6 +277,15 @@ impl SensorData {
                 }
                 _ => {}
             },
+            SensorConfiguration::Gyro(mode) => match mode {
+                GyroSensorMode::ANGLE => {
+                    self.data[0] = ev3rt::gyro_sensor_get_angle(self.port_idx) as u16;
+                }
+                GyroSensorMode::RATE => {
+                    self.data[0] = ev3rt::gyro_sensor_get_rate(self.port_idx) as u16;
+                }
+                GyroSensorMode::NONE => {}
+            }
             _ => {}
         }
     }
@@ -1406,6 +1418,7 @@ impl Time {
 
 pub struct KeyStatus {
     from_last_event: Duration,
+    last_state_duration: Duration,
     pressed: bool,
 }
 
@@ -1413,6 +1426,7 @@ impl KeyStatus {
     pub fn new() -> Self {
         Self {
             from_last_event: Duration::zero(),
+            last_state_duration: Duration::zero(),
             pressed: false,
         }
     }
@@ -1422,6 +1436,7 @@ impl KeyStatus {
             self.from_last_event += delta;
         } else {
             self.pressed = pressed;
+            self.last_state_duration = self.from_last_event;
             self.from_last_event = Duration::zero();
         }
     }
@@ -1447,6 +1462,10 @@ impl KeyStatus {
         } else {
             Duration::zero()
         }
+    }
+
+    pub fn last_state_duration(&self) -> Duration {
+        self.last_state_duration
     }
 
     pub fn press_event(&self) -> bool {
@@ -1514,6 +1533,40 @@ pub struct Ev3 {
     pub keys: Keys,
 }
 
+pub trait SensorGetterMut {
+    fn sensor(&mut self, port: SensorPort) -> &mut SensorData;
+}
+pub trait SensorGetter {
+    fn sensor(&self, port: SensorPort) -> &SensorData;
+}
+impl SensorGetterMut for Ev3 {
+    fn sensor(&mut self, port: SensorPort) -> &mut SensorData {
+        &mut (self.sensors[port as usize])
+    }
+}
+impl SensorGetter for Ev3 {
+    fn sensor(& self, port: SensorPort) -> &SensorData {
+        &(self.sensors[port as usize])
+    }
+}
+
+pub trait MotorGetterMut {
+    fn motor(&mut self, port: MotorPort) -> &mut MotorData;
+}
+pub trait MotorGetter {
+    fn motor(&self, port: MotorPort) -> &MotorData;
+}
+impl MotorGetterMut for Ev3 {
+    fn motor(&mut self, port: MotorPort) -> &mut MotorData {
+        &mut (self.motors[port as usize])
+    }
+}
+impl MotorGetter for Ev3 {
+    fn motor(&self, port: MotorPort) -> &MotorData {
+        &(self.motors[port as usize])
+    }
+}
+
 impl Ev3 {
     pub fn new() -> Ev3 {
         Ev3 {
@@ -1548,9 +1601,6 @@ impl Ev3 {
     pub fn s4(&mut self) -> &mut SensorData {
         &mut (self.sensors[3])
     }
-    pub fn sensor(&mut self, port: SensorPort) -> &mut SensorData {
-        &mut (self.sensors[port as usize])
-    }
 
     pub fn ma(&mut self) -> &mut MotorData {
         &mut (self.motors[0])
@@ -1563,9 +1613,6 @@ impl Ev3 {
     }
     pub fn md(&mut self) -> &mut MotorData {
         &mut (self.motors[3])
-    }
-    pub fn motor(&mut self, port: MotorPort) -> &mut MotorData {
-        &mut (self.motors[port as usize])
     }
 
     pub fn lcd_clear(&self) {
