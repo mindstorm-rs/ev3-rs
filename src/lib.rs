@@ -77,15 +77,19 @@ impl SensorData {
     pub fn val(&self) -> i32 {
         Self::val_conversion(self.data[0])
     }
+
     pub fn v1(&self) -> i32 {
         Self::val_conversion(self.data[0])
     }
+
     pub fn v2(&self) -> i32 {
         Self::val_conversion(self.data[1])
     }
+
     pub fn v3(&self) -> i32 {
         Self::val_conversion(self.data[2])
     }
+
     pub fn v4(&self) -> i32 {
         Self::val_conversion(self.data[3])
     }
@@ -718,9 +722,11 @@ impl InfoBox {
     pub fn value(&self) -> i32 {
         self.todo_value
     }
+
     pub fn set_value(&mut self, value: i32) {
         self.todo_value = value;
     }
+
     pub fn setup_value(&mut self, position: u8, digits: u8) {
         self.value_position = position;
         self.value_digits = digits;
@@ -731,6 +737,7 @@ impl InfoBox {
         self.todo_value = 0;
         self.done_value = 0;
     }
+
     pub fn setup_signed_value(
         &mut self,
         position: u8,
@@ -748,6 +755,7 @@ impl InfoBox {
         self.todo_value = 0;
         self.done_value = 0;
     }
+
     pub fn setup_glyphs(&mut self, gphs: &[Gph]) {
         for (i, g) in gphs.iter().enumerate() {
             self.todo[i] = *g;
@@ -789,6 +797,12 @@ impl InfoBox {
         self.done_value = self.todo_value;
     }
 }
+
+// sin(index) * 1000, with x in deg/24
+const SIN_TABLE: [i32; 24] = [
+    0, 258, 500, 707, 866, 965, 1000, 965, 866, 707, 500, 258, 0, -258, -500, -707, -866, -965,
+    -1000, -965, -866, -707, -500, -258,
+];
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum ScreenOrientation {
@@ -1005,12 +1019,15 @@ impl Screen {
     pub fn info_x(&self) -> i32 {
         self.info_x
     }
+
     pub fn info_y(&self) -> i32 {
         self.info_y
     }
+
     pub fn info_w(&self) -> i32 {
         self.info_w
     }
+
     pub fn info_h(&self) -> i32 {
         self.info_h
     }
@@ -1074,15 +1091,18 @@ impl Screen {
         let index = self.safe_info_index(index);
         self.infos[index].set_value(value);
     }
+
     pub fn set_info_bold(&mut self, index: usize, bold: bool) {
         let index = self.safe_info_index(index);
         self.infos[index].todo_bold = bold;
     }
+
     pub fn deselect_infos(&mut self) {
         for i in 0..self.info_count as usize {
             self.infos[i].todo_bold = false;
         }
     }
+
     pub fn select_info(&mut self, index: usize) {
         self.deselect_infos();
         let index = self.safe_info_index(index);
@@ -1105,6 +1125,7 @@ impl Screen {
         let index = self.safe_info_index(index);
         self.infos[index].setup_signed_value(position, digits, positive, zero, negative);
     }
+
     pub fn setup_info_glyphs(&mut self, index: usize, gphs: &[Gph]) {
         let index = self.safe_info_index(index);
         self.infos[index].setup_glyphs(gphs);
@@ -1132,12 +1153,10 @@ impl Screen {
 
     pub fn render_info(&mut self) {
         if self.must_refresh {
-            self.box_in_info(
-                self.info_x,
-                self.info_y,
+            self.clear_in_info(
+                Point::new(self.info_x, self.info_y),
                 self.info_w,
                 self.info_h,
-                LcdColor::WHITE,
             );
             self.must_refresh = false;
         }
@@ -1157,6 +1176,7 @@ impl Screen {
     pub fn info_base(&self) -> (i32, i32) {
         (self.info_x, self.info_y)
     }
+
     fn info_base_point(&self) -> Point {
         Point::new(self.info_x, self.info_y)
     }
@@ -1164,11 +1184,20 @@ impl Screen {
     pub fn graph_base(&self) -> (i32, i32) {
         (self.graph_x, self.graph_y)
     }
+
     pub fn graph_origin(&self) -> (i32, i32) {
         (self.graph_x + self.graph_ox, self.graph_y + self.graph_oy)
     }
 
-    fn to_absolute_pos(&self, x: i32, y: i32) -> (i32, i32) {
+    pub fn info_origin(&self) -> (i32, i32) {
+        (self.info_x, self.info_y)
+    }
+
+    // absolute coords -> real lcd screen coords
+    // screens coords -> full screen coords without orientation
+    // info coords -> info box screen area coords
+    // graph coords -> graph box screen area coords
+    fn screen_to_absolute(&self, x: i32, y: i32) -> (i32, i32) {
         match self.or {
             ScreenOrientation::Up => (x, y),
             ScreenOrientation::Down => (ev3rt::LCD_WIDTH - x, ev3rt::LCD_HEIGHT - y),
@@ -1177,8 +1206,25 @@ impl Screen {
         }
     }
 
-    fn to_absolute_point(&self, p: Point) -> Point {
-        let (x, y) = self.to_absolute_pos(p.x as i32, p.y as i32);
+    fn info_to_absolute_pos(&self, x: i32, y: i32) -> (i32, i32) {
+        let (info_or_x, info_or_y) = self.info_origin();
+        let rel_x = x + info_or_x;
+        let rel_y = y + info_or_y;
+
+        return self.screen_to_absolute(rel_x, rel_y);
+    }
+
+    fn graph_to_absolute_pos(&self, x: i32, y: i32) -> (i32, i32) {
+        return match self.or {
+            ScreenOrientation::Up => (x + self.graph_x, -y + self.graph_y),
+            ScreenOrientation::Down => (-x + self.graph_x, y + self.graph_y),
+            ScreenOrientation::Left => (y + self.graph_x, x + self.graph_y),
+            ScreenOrientation::Right => (-y + self.graph_x, -x + self.graph_y),
+        };
+    }
+
+    fn info_to_absolute_point(&self, p: Point) -> Point {
+        let (x, y) = self.info_to_absolute_pos(p.x as i32, p.y as i32);
         Point {
             x: x as u8,
             y: y as u8,
@@ -1186,14 +1232,7 @@ impl Screen {
     }
 
     fn in_info(&self, p: Point) -> Point {
-        self.to_absolute_point(p.plus(self.info_base_point()))
-    }
-
-    fn in_graph(&self, x: i32, y: i32) -> (i32, i32) {
-        self.to_absolute_pos(
-            self.graph_x + self.graph_ox + x,
-            self.graph_y + self.graph_oy - y,
-        )
+        self.info_to_absolute_point(p.plus(self.info_base_point()))
     }
 
     fn line_in_info(&self, p1: Point, p2: Point, bold: bool) {
@@ -1214,7 +1253,7 @@ impl Screen {
             ScreenOrientation::Up | ScreenOrientation::Down => (w, h),
             ScreenOrientation::Left | ScreenOrientation::Right => (h, w),
         };
-        let (x, y) = self.to_absolute_pos(x, y);
+        let (x, y) = self.info_to_absolute_pos(x, y);
         let (x, y) = match self.or {
             ScreenOrientation::Up => (x, y),
             ScreenOrientation::Down => (x - w, y - h),
@@ -1223,19 +1262,67 @@ impl Screen {
         };
         ev3rt::lcd_fill_rect(x, y, w, h, c);
     }
+
     fn clear_in_info(&self, p: Point, w: i32, h: i32) {
         self.box_in_info(p.x as i32, p.y as i32, w, h, LcdColor::WHITE);
     }
 
+    fn draw_graph_line_from_coords(&self, x0: i32, y0: i32, x1: i32, y1: i32) {
+        let (x0a, y0a) = self.graph_to_absolute_pos(x0, y0);
+        let (x1a, y1a) = self.graph_to_absolute_pos(x1, y1);
+        ev3rt::lcd_draw_line(x0a, y0a, x1a, y1a);
+    }
+
     pub fn draw_graph_line(&self, x0: i32, y0: i32, x1: i32, y1: i32, bold: bool) {
-        let (x0, y0) = self.in_graph(x0, y0);
-        let (x1, y1) = self.in_graph(x1, y1);
-        ev3rt::lcd_draw_line(x0, y0, x1, y1);
+        self.draw_graph_line_from_coords(x0, y0, x1, y1);
         if bold {
-            ev3rt::lcd_draw_line(x0 + 1, y0 + 1, x1 + 1, y1 + 1);
-            ev3rt::lcd_draw_line(x0 + 1, y0 - 1, x1 + 1, y1 - 1);
-            ev3rt::lcd_draw_line(x0 - 1, y0 + 1, x1 - 1, y1 + 1);
-            ev3rt::lcd_draw_line(x0 - 1, y0 - 1, x1 - 1, y1 - 1);
+            if y0 == y1 {
+                self.draw_graph_line_from_coords(x0, y0+1, x1, y1+1);
+            }else{
+                self.draw_graph_line_from_coords(x0+1, y0, x1+1, y1);
+            }
+        }
+    }
+
+    fn draw_graph_line_from_points(&self, p0: Point, p1: Point, bold: bool) {
+        self.draw_graph_line(p0.x as i32, p0.y as i32, p1.x as i32, p1.y as i32, bold)
+    }
+
+    fn move_point(from: Point, length: i32, angle: i32) -> Point {
+        let mut to = from;
+        to.x += (cos(angle) * length / 1000) as u8;
+        to.y += (sin(angle) * length / 1000) as u8;
+        return to;
+    }
+
+    pub fn draw_graph_arc(
+        &self,
+        center_x: i32,
+        center_y: i32,
+        start_angle: i32,
+        arc_angle: i32,
+        radius: i32,
+        bold: bool,
+    ) {
+        let mut step = 0;
+        let mut steps = 0;
+        if arc_angle > 0 {
+            step = 15;
+            steps = (arc_angle / 15) + 1;
+        } else if arc_angle < 0 {
+            step = -15;
+            steps = (-arc_angle / 15) + 1;
+        }
+
+        let center = Point::new(center_x, center_y);
+
+        let mut from = Screen::move_point(center, radius, start_angle);
+
+        for s in 0..steps {
+            let to_angle = start_angle + (s * step);
+            let to = Screen::move_point(center, radius, to_angle);
+            self.draw_graph_line_from_points(from, to, bold);
+            from = to;
         }
     }
 
@@ -1296,6 +1383,7 @@ impl Leds {
         *self = Self::new();
         self.apply();
     }
+
     pub fn apply(&mut self) {
         if self.todo_red != self.done_red || self.todo_green != self.done_green {
             let c = match (self.todo_red, self.todo_green) {
@@ -1320,9 +1408,11 @@ impl Duration {
     pub fn new(ticks: i32) -> Self {
         Self { ticks }
     }
+
     pub fn from_usec(usec: i32) -> Self {
         Self::new(usec)
     }
+
     pub fn from_msec(msec: i32) -> Self {
         Self::new(msec * 1000)
     }
@@ -1350,17 +1440,20 @@ impl core::ops::Add for Duration {
         Self::new(self.ticks + other.ticks)
     }
 }
+
 impl core::ops::Sub for Duration {
     type Output = Self;
     fn sub(self, other: Self) -> Self {
         Self::new(self.ticks - other.ticks)
     }
 }
+
 impl core::ops::AddAssign for Duration {
     fn add_assign(&mut self, other: Self) {
         self.ticks += other.ticks;
     }
 }
+
 impl core::ops::SubAssign for Duration {
     fn sub_assign(&mut self, other: Self) {
         self.ticks -= other.ticks;
@@ -1411,6 +1504,7 @@ impl Time {
     pub fn from_last_read(&self) -> Duration {
         self.duration_from_last_read
     }
+
     pub fn from_last_reset(&self) -> Duration {
         self.duration_from_last_reset
     }
@@ -1444,6 +1538,7 @@ impl KeyStatus {
     pub fn is_pressed(&self) -> bool {
         self.pressed
     }
+
     pub fn is_released(&self) -> bool {
         !self.pressed
     }
@@ -1765,4 +1860,20 @@ impl Ev3 {
         self.leds.apply();
         self.screen.render_info();
     }
+}
+
+// sin(v) * 1000, with x in deg
+pub fn sin(v: i32) -> i32 {
+    let v = v / 15;
+
+    if v >= 0 {
+        SIN_TABLE[(v % 24) as usize]
+    } else {
+        SIN_TABLE[((-v) % 24) as usize]
+    }
+}
+
+// cos(v) * 1000, with x in deg
+pub fn cos(v: i32) -> i32 {
+    sin(v + 90)
 }
