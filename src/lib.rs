@@ -44,7 +44,7 @@ pub enum SensorConfiguration {
     NxtAccel,
     NxtColor,
     NxtTemp,
-    NxtUltrasonic,
+    NxtUltrasonic(UsSensorMode),
 }
 
 pub struct SensorData {
@@ -210,7 +210,23 @@ impl SensorData {
             SensorConfiguration::NxtAccel => {}
             SensorConfiguration::NxtColor => {}
             SensorConfiguration::NxtTemp => {}
-            SensorConfiguration::NxtUltrasonic => {}
+            SensorConfiguration::NxtUltrasonic(mode) => {
+                let er = ev3rt::sensor_config(self.port(), SensorType::HtNxtINFRARED);
+                if er == ER::OK {
+                    self.cfg_applied = true;
+                    match mode {
+                        UsSensorMode::DISTANCE => {
+                            let val = ev3rt::htnxt_ultrasonic_sensor_get_distance(self.port_idx);
+                            if val == -1 || val == 0 {
+                                self.cfg_applied = false;
+                            }
+                        }
+                        _ => {
+                            self.cfg_applied = false;
+                        }
+                    }
+                }
+            }
         }
         self.cfg_applied
     }
