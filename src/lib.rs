@@ -44,6 +44,7 @@ pub enum SensorConfiguration {
     NxtAccel,
     NxtColor,
     NxtTemp,
+    NxtUltrasonic,
 }
 
 pub struct SensorData {
@@ -209,6 +210,7 @@ impl SensorData {
             SensorConfiguration::NxtAccel => {}
             SensorConfiguration::NxtColor => {}
             SensorConfiguration::NxtTemp => {}
+            SensorConfiguration::NxtUltrasonic => {}
         }
         self.cfg_applied
     }
@@ -289,7 +291,7 @@ impl SensorData {
                     self.data[0] = ev3rt::gyro_sensor_get_rate(self.port_idx) as u16;
                 }
                 GyroSensorMode::NONE => {}
-            }
+            },
             _ => {}
         }
     }
@@ -1277,9 +1279,9 @@ impl Screen {
         self.draw_graph_line_from_coords(x0, y0, x1, y1);
         if bold {
             if y0 == y1 {
-                self.draw_graph_line_from_coords(x0, y0+1, x1, y1+1);
-            }else{
-                self.draw_graph_line_from_coords(x0+1, y0, x1+1, y1);
+                self.draw_graph_line_from_coords(x0, y0 + 1, x1, y1 + 1);
+            } else {
+                self.draw_graph_line_from_coords(x0 + 1, y0, x1 + 1, y1);
             }
         }
     }
@@ -1640,7 +1642,7 @@ impl SensorGetterMut for Ev3 {
     }
 }
 impl SensorGetter for Ev3 {
-    fn sensor(& self, port: SensorPort) -> &SensorData {
+    fn sensor(&self, port: SensorPort) -> &SensorData {
         &(self.sensors[port as usize])
     }
 }
