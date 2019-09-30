@@ -44,6 +44,7 @@ pub enum SensorConfiguration {
     NxtAccel,
     NxtColor,
     NxtTemp,
+    NxtUltrasonic(UsSensorMode),
 }
 
 pub struct SensorData {
@@ -59,12 +60,12 @@ impl SensorData {
     }
 
     pub fn new(port: SensorPort) -> Self {
-        return Self {
+        Self {
             port_idx: port,
             cfg: SensorConfiguration::None,
             cfg_applied: false,
             data: [0xffff; 4],
-        };
+        }
     }
 
     pub fn port(&self) -> SensorPort {
@@ -72,7 +73,8 @@ impl SensorData {
     }
 
     fn val_conversion(v: u16) -> i32 {
-        (v as i16) as i32
+        i32::from(v as i16)
+
     }
     pub fn val(&self) -> i32 {
         Self::val_conversion(self.data[0])
@@ -209,6 +211,23 @@ impl SensorData {
             SensorConfiguration::NxtAccel => {}
             SensorConfiguration::NxtColor => {}
             SensorConfiguration::NxtTemp => {}
+            SensorConfiguration::NxtUltrasonic(mode) => {
+                let er = ev3rt::sensor_config(self.port(), SensorType::NxtINFRARED);
+                if er == ER::OK {
+                    self.cfg_applied = true;
+                    match mode {
+                        UsSensorMode::DISTANCE => {
+                            let val = ev3rt::ultrasonic_sensor_get_distance_nxt(self.port_idx);
+                            if val == -1 || val == 0 {
+                                self.cfg_applied = false;
+                            }
+                        }
+                        _ => {
+                            self.cfg_applied = false;
+                        }
+                    }
+                }
+            }
         }
         self.cfg_applied
     }
@@ -228,7 +247,7 @@ impl SensorData {
                         if val == 0xff {
                             self.data[0] = 0xffff;
                         } else {
-                            self.data[0] = val as u16;
+                            self.data[0] = u16::from(val);
                         }
                     }
                     ColorSensorMode::COLOR => {
@@ -241,7 +260,7 @@ impl SensorData {
                         if val == 0xff {
                             self.data[0] = 0xffff;
                         } else {
-                            self.data[0] = val as u16;
+                            self.data[0] = u16::from(val);
                         }
                     }
                     ColorSensorMode::RGB => {
@@ -259,7 +278,7 @@ impl SensorData {
                     if val == 0xff {
                         self.data[0] = 0xffff;
                     } else {
-                        self.data[0] = val as u16;
+                        self.data[0] = u16::from(val);
                     }
                 }
                 IrSensorMode::REMOTE => {
@@ -289,7 +308,7 @@ impl SensorData {
                     self.data[0] = ev3rt::gyro_sensor_get_rate(self.port_idx) as u16;
                 }
                 GyroSensorMode::NONE => {}
-            }
+            },
             _ => {}
         }
     }
@@ -312,7 +331,7 @@ impl MotorData {
     }
 
     pub fn new(port: MotorPort) -> MotorData {
-        return MotorData {
+        MotorData {
             port_idx: port,
             cfg: MotorType::NONE,
             cfg_applied: false,
@@ -320,7 +339,7 @@ impl MotorData {
             pos: 0,
             pos_target: 0,
             pos_i: 0,
-        };
+        }
     }
 
     pub fn port(&self) -> MotorPort {
@@ -488,8 +507,8 @@ impl Point {
 
     fn mov(self: Point, x: i32, y: i32) -> Point {
         Point {
-            x: ((self.x as i32) + x) as u8,
-            y: ((self.y as i32) + y) as u8,
+            x: (i32::from(self.x) + x) as u8,
+            y: (i32::from(self.x) + y) as u8,
         }
     }
 }
@@ -605,15 +624,15 @@ impl Glyph {
                 break;
             }
 
-            let skip = c == ('-' as u8);
+            let skip = c == b'-';
 
             if i % 2 == 0 {
                 if !skip {
-                    x = (c as i32) - ('a' as i32);
+                    x = i32::from(c) - ('a' as i32);
                 }
             } else {
                 if !skip {
-                    let y = (c as i32) - ('A' as i32);
+                    let y = i32::from(c) - ('A' as i32);
 
                     if x >= 0
                         && x <= (MAX_GLYPH_POINTS as i32)
@@ -763,7 +782,7 @@ impl InfoBox {
     }
 
     fn apply_value(&mut self) {
-        if self.value_digits <= 0 || self.todo_value == self.done_value {
+        if self.value_digits == 0 || self.todo_value == self.done_value {
             return;
         }
 
@@ -779,7 +798,7 @@ impl InfoBox {
                 gph = Gph::Space;
             }
             self.todo[current_position as usize] = gph;
-            current_value = current_value / 10;
+            current_value /= 10;
         }
 
         if self.has_sign {
@@ -1074,7 +1093,7 @@ impl Screen {
         let base_h = self.info_h / rows;
         let base_x = base_w * (column - 1);
         let base_y = base_h * (row - 1);
-        let w = size as i32 * GLYPH_WIDTH;
+        let w = i32::from(size) * GLYPH_WIDTH;
         let h = GLYPH_HEIGHT;
         let x = base_x + (base_w / 2) - (w / 2);
         let y = base_y + (base_h / 2) - (h / 2);
@@ -1211,16 +1230,16 @@ impl Screen {
         let rel_x = x + info_or_x;
         let rel_y = y + info_or_y;
 
-        return self.screen_to_absolute(rel_x, rel_y);
+        self.screen_to_absolute(rel_x, rel_y)
     }
 
     fn graph_to_absolute_pos(&self, x: i32, y: i32) -> (i32, i32) {
-        return match self.or {
+        match self.or {
             ScreenOrientation::Up => (x + self.graph_x, -y + self.graph_y),
             ScreenOrientation::Down => (-x + self.graph_x, y + self.graph_y),
             ScreenOrientation::Left => (y + self.graph_x, x + self.graph_y),
             ScreenOrientation::Right => (-y + self.graph_x, -x + self.graph_y),
-        };
+        }
     }
 
     fn info_to_absolute_point(&self, p: Point) -> Point {
@@ -1238,7 +1257,7 @@ impl Screen {
     fn line_in_info(&self, p1: Point, p2: Point, bold: bool) {
         let p1 = self.in_info(p1);
         let p2 = self.in_info(p2);
-        let (x0, y0, x1, y1) = (p1.x as i32, p1.y as i32, p2.x as i32, p2.y as i32);
+        let (x0, y0, x1, y1) = (i32::from(p1.x), i32::from(p1.y), i32::from(p2.x), i32::from(p2.y));
         ev3rt::lcd_draw_line(x0, y0, x1, y1);
         if bold {
             ev3rt::lcd_draw_line(x0 + 1, y0 + 1, x1 + 1, y1 + 1);
@@ -1248,7 +1267,7 @@ impl Screen {
         }
     }
 
-    pub fn box_in_info(&self, x: i32, y: i32, w: i32, h: i32, c: LcdColor) {
+    pub fn box_in_info(&self, x: i32, y: i32, w: i32, h: i32, color: LcdColor) {
         let (w, h) = match self.or {
             ScreenOrientation::Up | ScreenOrientation::Down => (w, h),
             ScreenOrientation::Left | ScreenOrientation::Right => (h, w),
@@ -1260,7 +1279,7 @@ impl Screen {
             ScreenOrientation::Left => (x, y - h),
             ScreenOrientation::Right => (x - w, y),
         };
-        ev3rt::lcd_fill_rect(x, y, w, h, c);
+        ev3rt::lcd_fill_rect(x, y, w, h, color);
     }
 
     fn clear_in_info(&self, p: Point, w: i32, h: i32) {
@@ -1277,9 +1296,9 @@ impl Screen {
         self.draw_graph_line_from_coords(x0, y0, x1, y1);
         if bold {
             if y0 == y1 {
-                self.draw_graph_line_from_coords(x0, y0+1, x1, y1+1);
-            }else{
-                self.draw_graph_line_from_coords(x0+1, y0, x1+1, y1);
+                self.draw_graph_line_from_coords(x0, y0 + 1, x1, y1 + 1);
+            } else {
+                self.draw_graph_line_from_coords(x0 + 1, y0, x1 + 1, y1);
             }
         }
     }
@@ -1292,7 +1311,8 @@ impl Screen {
         let mut to = from;
         to.x += (cos(angle) * length / 1000) as u8;
         to.y += (sin(angle) * length / 1000) as u8;
-        return to;
+
+        to
     }
 
     pub fn draw_graph_arc(
@@ -1414,7 +1434,7 @@ impl Duration {
     }
 
     pub fn from_msec(msec: i32) -> Self {
-        Self::new(msec * 1000)
+        Self::new(msec * 1_000)
     }
 
     pub fn zero() -> Self {
@@ -1426,11 +1446,11 @@ impl Duration {
     }
 
     pub fn msec(self) -> i32 {
-        self.ticks / 1000
+        self.ticks / 1_000
     }
 
     pub fn sec(self) -> i32 {
-        self.ticks / 1000000
+        self.ticks / 1_000_000
     }
 }
 
@@ -1640,7 +1660,7 @@ impl SensorGetterMut for Ev3 {
     }
 }
 impl SensorGetter for Ev3 {
-    fn sensor(& self, port: SensorPort) -> &SensorData {
+    fn sensor(&self, port: SensorPort) -> &SensorData {
         &(self.sensors[port as usize])
     }
 }
@@ -1876,4 +1896,34 @@ pub fn sin(v: i32) -> i32 {
 // cos(v) * 1000, with x in deg
 pub fn cos(v: i32) -> i32 {
     sin(v + 90)
+}
+
+impl Default for Ev3 {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Default for Keys {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Default for KeyStatus {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Default for Time {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Default for Screen {
+    fn default() -> Self {
+        Self::new()
+    }
 }
