@@ -507,8 +507,8 @@ impl Point {
 
     fn mov(self: Point, x: i32, y: i32) -> Point {
         Point {
-            x: (i32::from(self.x) + x) as u8,
-            y: (i32::from(self.x) + y) as u8,
+            x: ((self.x as i32) + x) as u8,
+            y: ((self.y as i32) + y) as u8,
         }
     }
 }
@@ -628,11 +628,11 @@ impl Glyph {
 
             if i % 2 == 0 {
                 if !skip {
-                    x = i32::from(c) - ('a' as i32);
+                    x = (c as i32) - ('a' as i32);
                 }
             } else {
                 if !skip {
-                    let y = i32::from(c) - ('A' as i32);
+                    let y = (c as i32) - ('A' as i32);
 
                     if x >= 0
                         && x <= (MAX_GLYPH_POINTS as i32)
@@ -1093,7 +1093,7 @@ impl Screen {
         let base_h = self.info_h / rows;
         let base_x = base_w * (column - 1);
         let base_y = base_h * (row - 1);
-        let w = i32::from(size) * GLYPH_WIDTH;
+        let w = size as i32 * GLYPH_WIDTH;
         let h = GLYPH_HEIGHT;
         let x = base_x + (base_w / 2) - (w / 2);
         let y = base_y + (base_h / 2) - (h / 2);
@@ -1257,7 +1257,7 @@ impl Screen {
     fn line_in_info(&self, p1: Point, p2: Point, bold: bool) {
         let p1 = self.in_info(p1);
         let p2 = self.in_info(p2);
-        let (x0, y0, x1, y1) = (i32::from(p1.x), i32::from(p1.y), i32::from(p2.x), i32::from(p2.y));
+        let (x0, y0, x1, y1) = (p1.x as i32, p1.y as i32, p2.x as i32, p2.y as i32);
         ev3rt::lcd_draw_line(x0, y0, x1, y1);
         if bold {
             ev3rt::lcd_draw_line(x0 + 1, y0 + 1, x1 + 1, y1 + 1);
