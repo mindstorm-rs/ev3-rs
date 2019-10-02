@@ -77,7 +77,7 @@ impl SensorData {
     }
 
     fn val_conversion(v: u16) -> i32 {
-        i32::from(v as i16)
+        (v as i16) as i32
     }
     pub fn val(&self) -> i32 {
         Self::val_conversion(self.data[0])
@@ -265,7 +265,7 @@ impl SensorData {
                         if val == 0xff {
                             self.data[0] = 0xffff;
                         } else {
-                            self.data[0] = u16::from(val);
+                            self.data[0] = val as u16;;
                         }
                     }
                     ColorSensorMode::COLOR => {
@@ -278,7 +278,7 @@ impl SensorData {
                         if val == 0xff {
                             self.data[0] = 0xffff;
                         } else {
-                            self.data[0] = u16::from(val);
+                            self.data[0] = val as u16;;
                         }
                     }
                     ColorSensorMode::RGB => {
@@ -296,7 +296,7 @@ impl SensorData {
                     if val == 0xff {
                         self.data[0] = 0xffff;
                     } else {
-                        self.data[0] = u16::from(val);
+                        self.data[0] = val as u16;;
                     }
                 }
                 IrSensorMode::REMOTE => {
