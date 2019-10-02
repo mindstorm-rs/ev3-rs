@@ -51,6 +51,8 @@ pub struct SensorData {
     port_idx: SensorPort,
     cfg: SensorConfiguration,
     cfg_applied: bool,
+    minimum_read_period: Duration,
+    elapsed_read_period: Duration,
     pub data: [u16; 4],
 }
 
@@ -64,6 +66,8 @@ impl SensorData {
             port_idx: port,
             cfg: SensorConfiguration::None,
             cfg_applied: false,
+            minimum_read_period: Duration::zero(),
+            elapsed_read_period: Duration::zero(),
             data: [0xffff; 4],
         }
     }
@@ -74,7 +78,6 @@ impl SensorData {
 
     fn val_conversion(v: u16) -> i32 {
         i32::from(v as i16)
-
     }
     pub fn val(&self) -> i32 {
         Self::val_conversion(self.data[0])
@@ -103,6 +106,12 @@ impl SensorData {
     pub fn configure(&mut self, cfg: SensorConfiguration) {
         self.cfg = cfg;
         self.cfg_applied = false;
+        match self.cfg {
+            SensorConfiguration::NxtUltrasonic(_) => {
+                self.minimum_read_period = Duration::from_usec(22222)
+            }
+            _ => {}
+        }
         self.clear_data();
     }
 
@@ -234,10 +243,17 @@ impl SensorData {
         self.cfg_applied
     }
 
-    pub fn read(&mut self) {
+    pub fn read(&mut self, from_last_read: Duration) {
         self.clear_data();
         if !self.cfg_applied {
             return;
+        }
+
+        self.elapsed_read_period += from_last_read;
+        if self.elapsed_read_period < self.minimum_read_period {
+            return;
+        } else {
+            self.elapsed_read_period = Duration::zero();
         }
 
         match &self.cfg {
@@ -1872,17 +1888,17 @@ impl Ev3 {
     }
 
     pub fn read(&mut self) {
-        self.s1().read();
-        self.s2().read();
-        self.s3().read();
-        self.s4().read();
+        self.time.read();
+        let elapsed = self.time.from_last_read();
+        self.s1().read(elapsed);
+        self.s2().read(elapsed);
+        self.s3().read(elapsed);
+        self.s4().read(elapsed);
         self.ma().read();
         self.mb().read();
         self.mc().read();
         self.md().read();
-        self.time.read();
-        self.keys
-            .read(self.time.duration_from_last_read, self.screen.orientation())
+        self.keys.read(elapsed, self.screen.orientation())
     }
 
     pub fn apply(&mut self) {
