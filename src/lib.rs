@@ -108,7 +108,7 @@ impl SensorData {
         self.cfg_applied = false;
         match self.cfg {
             SensorConfiguration::NxtUltrasonic(_) => {
-                self.minimum_read_period = Duration::from_usec(22222)
+                self.minimum_read_period = Duration::from_usec(23456)
             }
             _ => {}
         }
@@ -221,7 +221,7 @@ impl SensorData {
             SensorConfiguration::NxtColor => {}
             SensorConfiguration::NxtTemp => {}
             SensorConfiguration::NxtUltrasonic(mode) => {
-                let er = ev3rt::sensor_config(self.port(), SensorType::NxtINFRARED);
+                let er = ev3rt::sensor_config(self.port(), SensorType::NxtULTRASONIC);
                 if er == ER::OK {
                     self.cfg_applied = true;
                     match mode {
@@ -244,8 +244,8 @@ impl SensorData {
     }
 
     pub fn read(&mut self, from_last_read: Duration) {
-        self.clear_data();
         if !self.cfg_applied {
+            self.clear_data();
             return;
         }
 
@@ -255,6 +255,8 @@ impl SensorData {
         } else {
             self.elapsed_read_period = Duration::zero();
         }
+
+        self.clear_data();
 
         match &self.cfg {
             SensorConfiguration::None => {}
@@ -1535,7 +1537,7 @@ impl Time {
         let (mut delta, mut current) = self.compute_duration_from_last_read();
         // It turns out that waiting "a bit" gives more reliable sensor reads...
         while delta.usec() < 800 {
-            //ev3rt::msleep(1);
+            ev3rt::msleep(1);
             let (d, c) = self.compute_duration_from_last_read();
             delta = d;
             current = c;
