@@ -4,13 +4,10 @@
 name = "ev3"
 version = "0.5.0"
 dependencies = [
- "ev3rt 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ev3rt 0.4.0",
 ]
 
 [[package]]
 name = "ev3rt"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
+version = "0.4.0"
 
-[metadata]
-"checksum ev3rt 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e76e6331e504055036b340aaae8b7061bc8c0fd999f5b5abc959aa01217fc220"
