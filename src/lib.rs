@@ -267,7 +267,7 @@ impl SensorData {
                         if val == 0xff {
                             self.data[0] = 0xffff;
                         } else {
-                            self.data[0] = val as u16;;
+                            self.data[0] = val as u16;
                         }
                     }
                     ColorSensorMode::COLOR => {
@@ -280,7 +280,7 @@ impl SensorData {
                         if val == 0xff {
                             self.data[0] = 0xffff;
                         } else {
-                            self.data[0] = val as u16;;
+                            self.data[0] = val as u16;
                         }
                     }
                     ColorSensorMode::RGB => {
@@ -298,7 +298,7 @@ impl SensorData {
                     if val == 0xff {
                         self.data[0] = 0xffff;
                     } else {
-                        self.data[0] = val as u16;;
+                        self.data[0] = val as u16;
                     }
                 }
                 IrSensorMode::REMOTE => {
