@@ -662,7 +662,7 @@ impl Gph {
 
 const MAX_GLYPH_POINTS: usize = 32;
 pub const GLYPH_WIDTH: i32 = 13;
-pub const GLYPH_WIDTH_WIDE: i32 = 23;
+pub const GLYPH_WIDTH_WIDE: i32 = 26;
 pub const GLYPH_HEIGHT: i32 = 23;
 
 #[derive(Clone, Copy)]
@@ -1219,7 +1219,8 @@ impl Screen {
             let todo = self.infos[index].todo[i];
             let done = self.infos[index].done[i];
 
-            if todo != Gph::NONE && (done != todo || done_bold != todo_bold) {
+            if (todo != Gph::NONE || done == Gph::NONE) && (done != todo || done_bold != todo_bold)
+            {
                 let x = (self.infos[index].position.x as i32) + (i as i32 * GLYPH_WIDTH);
                 let y = self.infos[index].position.y as i32;
                 self.draw_glyph(todo, x, y, todo_bold);
