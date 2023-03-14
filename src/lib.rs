@@ -1,6 +1,6 @@
 #![no_std]
 
-extern crate ev3rt;
+pub use ev3rt;
 use ev3rt::*;
 
 #[derive(PartialEq)]
@@ -336,9 +336,37 @@ impl SensorData {
                     self.data[0] = ev3rt::gyro_sensor_get_angle(self.port_idx) as u16;
                 }
                 GyroSensorMode::RATE => {
-                    self.data[0] = ev3rt::gyro_sensor_get_rate(self.port_idx) as u16;
+                    let rate = ev3rt::gyro_sensor_get_rate(self.port_idx);
+                    let is_calibrated = self.data[2] == 0;
+                    self.data[0] = if is_calibrated {
+                        rate - (self.data[3] as i16)
+                    } else {
+                        rate
+                    } as u16;
                 }
                 GyroSensorMode::NONE => {}
+            },
+            _ => {}
+        }
+    }
+
+    pub fn hard_calibration(&mut self) {
+        match &self.cfg {
+            SensorConfiguration::Gyro(_) => {
+                ev3rt::gyro_sensor_reset(self.port_idx);
+            }
+            _ => {}
+        }
+    }
+
+    pub fn soft_calibration(&mut self) {
+        match &self.cfg {
+            SensorConfiguration::Gyro(mode) => match mode {
+                GyroSensorMode::RATE => {
+                    self.data[2] = 0;
+                    self.data[3] = ev3rt::gyro_sensor_get_rate(self.port_idx) as u16;
+                }
+                _ => {}
             },
             _ => {}
         }
@@ -1901,6 +1929,19 @@ impl Ev3 {
         self.mc().read();
         self.md().read();
         self.keys.read(elapsed, self.screen.orientation())
+    }
+
+    pub fn calibration(&mut self) {
+        ev3rt::msleep(200);
+        self.s1().hard_calibration();
+        self.s2().hard_calibration();
+        self.s3().hard_calibration();
+        self.s4().hard_calibration();
+        ev3rt::msleep(100);
+        self.s1().soft_calibration();
+        self.s2().soft_calibration();
+        self.s3().soft_calibration();
+        self.s4().soft_calibration();
     }
 
     pub fn apply(&mut self) {
