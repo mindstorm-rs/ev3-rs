@@ -243,6 +243,10 @@ impl SensorData {
         self.cfg_applied
     }
 
+    pub fn skip_read(&mut self, from_last_read: Duration) {
+        self.elapsed_read_period += from_last_read;
+    }
+
     pub fn read(&mut self, from_last_read: Duration) {
         if !self.cfg_applied {
             self.clear_data();
@@ -1700,6 +1704,8 @@ impl Keys {
 }
 
 pub struct Ev3 {
+    minimum_sensor_read_period: Duration,
+    elapsed_sensor_read_period: Duration,
     pub sensors: [SensorData; 4],
     pub motors: [MotorData; 4],
     pub screen: Screen,
@@ -1745,6 +1751,8 @@ impl MotorGetter for Ev3 {
 impl Ev3 {
     pub fn new() -> Ev3 {
         Ev3 {
+            minimum_sensor_read_period: Duration::zero(),
+            elapsed_sensor_read_period: Duration::zero(),
             sensors: [
                 SensorData::new(SensorPort::S1),
                 SensorData::new(SensorPort::S2),
@@ -1810,6 +1818,15 @@ impl Ev3 {
     }
 
     pub fn apply_configuration(&mut self) {
+        if self.sensors.iter().any(|s| {
+            if let SensorConfiguration::NxtUltrasonic(_) = s.cfg {
+                true
+            } else {
+                false
+            }
+        }) {
+            self.minimum_sensor_read_period = Duration::from_usec(23567);
+        }
         self.leds.reset();
         self.lcd_clear();
 
@@ -1921,10 +1938,19 @@ impl Ev3 {
     pub fn read(&mut self) {
         self.time.read();
         let elapsed = self.time.from_last_read();
-        self.s1().read(elapsed);
-        self.s2().read(elapsed);
-        self.s3().read(elapsed);
-        self.s4().read(elapsed);
+        self.elapsed_sensor_read_period += elapsed;
+        if self.elapsed_sensor_read_period < self.minimum_sensor_read_period {
+            self.s1().skip_read(elapsed);
+            self.s2().skip_read(elapsed);
+            self.s3().skip_read(elapsed);
+            self.s4().skip_read(elapsed);
+        } else {
+            self.elapsed_sensor_read_period = Duration::zero();
+            self.s1().read(elapsed);
+            self.s2().read(elapsed);
+            self.s3().read(elapsed);
+            self.s4().read(elapsed);
+        }
         self.ma().read();
         self.mb().read();
         self.mc().read();
