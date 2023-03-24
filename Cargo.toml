@@ -1,6 +1,6 @@
 [package]
 name = "ev3"
-version = "0.5.1"
+version = "0.5.2"
 authors = ["Massimiliano Mantione <massimiliano.mantione@gmail.com>"]
 edition = "2018"
 description = "High level EV3 API"
